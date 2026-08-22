@@ -105,7 +105,7 @@ async def get_ticket_messages(db: Database, ticket_id: int) -> list[dict[str, An
     async with db.session() as session:
         result = await session.execute(
             text(
-                "SELECT * FROM ticket_messages WHERE ticket_id = :tid ORDER BY created_at ASC"
+                "SELECT * FROM ticket_messages WHERE ticket_id = :tid AND sender_role != 'note' ORDER BY created_at ASC"
             ),
             {"tid": ticket_id},
         )
@@ -212,3 +212,39 @@ async def get_canned_responses(
                 text("SELECT * FROM canned_responses WHERE is_active = 1")
             )
         return [dict(r) for r in result.mappings().all()]
+
+
+async def get_canned_body(db: Database, canned_id: int) -> str | None:
+    async with db.session() as session:
+        result = await session.execute(
+            text("SELECT body FROM canned_responses WHERE id = :id AND is_active = 1"),
+            {"id": canned_id},
+        )
+        row = result.first()
+        return str(row[0]) if row else None
+
+
+async def add_ticket_note(
+    db: Database, *, ticket_id: int, manager_id: int, note: str
+) -> None:
+    """Internal manager note — stored as message with role 'note' (never shown to client)."""
+    async with db.transaction() as session:
+        await session.execute(
+            text(
+                "INSERT INTO ticket_messages (ticket_id, sender_id, sender_role, text)"
+                " VALUES (:tid, :sid, 'note', :txt)"
+            ),
+            {"tid": ticket_id, "sid": manager_id, "txt": note},
+        )
+
+
+async def get_ticket_notes(db: Database, ticket_id: int) -> list[dict[str, Any]]:
+    async with db.session() as session:
+        result = await session.execute(
+            text(
+                "SELECT * FROM ticket_messages WHERE ticket_id = :tid AND sender_role = 'note'"
+                " ORDER BY created_at"
+            ),
+            {"tid": ticket_id},
+        )
+        return [dict(row._mapping) for row in result.all()]

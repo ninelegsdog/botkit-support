@@ -136,8 +136,42 @@ def create_support_router(state: AppState) -> Router:
         ticket_id = int(callback.data.split(":")[1])
         await state_fsm.update_data(ticket_id=ticket_id)
         await state_fsm.set_state(TicketReply.entering_reply)
-        await callback.message.edit_text("Напишите ответ:")  # type: ignore
+        canned = await service.get_canned_responses(db)
+        rows = [
+            [InlineKeyboardButton(text=c["title"], callback_data=f"canned:{c['id']}")]
+            for c in canned[:6]
+        ]
+        kb = InlineKeyboardMarkup(inline_keyboard=rows) if rows else None
+        await callback.message.edit_text("Напишите ответ (или выберите шаблон):", reply_markup=kb)  # type: ignore
         await callback.answer()
+
+    @router.callback_query(F.data.startswith("canned:"))
+    async def use_canned(callback: CallbackQuery, state_fsm: FSMContext) -> None:
+        if not callback.data:
+            return
+        cid = int(callback.data.split(":")[1])
+        body = await service.get_canned_body(db, cid)
+        if not body:
+            await callback.answer("Шаблон не найден.")
+            return
+        await state_fsm.update_data(canned_body=body)
+        await callback.message.edit_text(f"Ответ (шаблон):\n{body}\n\nОтправить? ✅ / ✏️ напишите свой.")  # type: ignore
+        await callback.answer("Теперь отправьте /send или свой текст.")
+
+    @router.message(Command("send"), TicketReply.entering_reply)
+    async def send_canned_reply(message: Message, state_fsm: FSMContext) -> None:
+        data = await state_fsm.get_data()
+        ticket_id = int(str(data.get("ticket_id", 0)))
+        body = str(data.get("canned_body", ""))
+        await service.add_message(
+            db,
+            ticket_id=ticket_id,
+            sender_id=message.from_user.id,  # type: ignore[union-attr]
+            sender_role="manager",
+            text_content=body,
+        )
+        await state_fsm.clear()
+        await message.answer(f"✅ Ответ отправлен по тикету #{ticket_id}.")
 
     @router.message(TicketReply.entering_reply)
     async def send_reply(message: Message, state_fsm: FSMContext) -> None:
@@ -147,7 +181,7 @@ def create_support_router(state: AppState) -> Router:
             db,
             ticket_id=ticket_id,
             sender_id=message.from_user.id,  # type: ignore[union-attr]
-            sender_role="client",
+            sender_role="manager",
             text_content=message.text or "",
         )
         await state_fsm.clear()
