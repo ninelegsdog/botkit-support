@@ -13,6 +13,8 @@ class Config:
     log_level: str = "INFO"
     sla_reply_minutes: int = 30
     sla_close_hours: int = 24
+    sentry_dsn: str = ""
+    metrics_port: int = 8084
 
     @classmethod
     def from_env(cls) -> Config:
@@ -24,6 +26,8 @@ class Config:
             log_level=os.getenv("LOG_LEVEL", "INFO"),
             sla_reply_minutes=int(os.getenv("SLA_REPLY_MINUTES", "30")),
             sla_close_hours=int(os.getenv("SLA_CLOSE_HOURS", "24")),
+            sentry_dsn=os.getenv("SENTRY_DSN", ""),
+            metrics_port=int(os.getenv("METRICS_PORT", "8084")),
         )
 
 

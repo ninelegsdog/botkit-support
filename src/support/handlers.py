@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -99,8 +101,8 @@ def create_support_router(state: AppState) -> Router:
         for mgr in managers:
             try:
                 await state.bot.send_message(int(str(mgr["user_id"])), card, reply_markup=kb)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("notify failed: %s", e)
 
     @router.callback_query(F.data == "ticket_cancel")
     async def cancel_ticket(callback: CallbackQuery, state_fsm: FSMContext) -> None:
@@ -157,8 +159,8 @@ def create_support_router(state: AppState) -> Router:
                     int(str(ticket["manager_id"])),
                     f"💬 Клиент ответил по тикету #{ticket_id}: {message.text}",
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("notify failed: %s", e)
 
     @router.callback_query(F.data.startswith("ticket_close:"))
     async def close_ticket_handler(callback: CallbackQuery) -> None:
@@ -198,8 +200,8 @@ def create_support_router(state: AppState) -> Router:
         )
         try:
             await callback.message.answer("Оцените качество: ⭐1-5", reply_markup=kb)  # type: ignore
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("rate request failed: %s", e)
 
     @router.callback_query(F.data.startswith("ticket_close_no:"))
     async def cancel_close(callback: CallbackQuery) -> None:
@@ -234,8 +236,8 @@ def create_support_router(state: AppState) -> Router:
                     int(str(ticket["user_id"])),
                     f"👋 Менеджер поможет вам по тикету #{ticket_id}.",
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("notify failed: %s", e)
 
     @router.callback_query(F.data.startswith("ticket_skip:"))
     async def skip_ticket_handler(callback: CallbackQuery) -> None:
@@ -265,3 +267,6 @@ def create_support_router(state: AppState) -> Router:
         await message.answer(f"📊 Ваша статистика:\nЗакрытых тикетов: {stats['closed']}")
 
     return router
+
+
+logger = logging.getLogger(__name__)
