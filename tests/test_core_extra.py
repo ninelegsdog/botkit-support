@@ -200,11 +200,9 @@ async def test_webhook_app_registers_routes() -> None:
     assert any(r.resource and "health" in r.resource.canonical for r in routes)
     req = make_mocked_request("GET", "/health", app=app)
     resp = await health_handler(req)
-    import json
-
-    body = json.loads(resp.body)
-    assert body["status"] == "ok"
-    assert "uptime" in body
+    # health_handler returns plain text "ok" (not JSON); read with .text.
+    assert resp.status == 200
+    assert resp.text == "ok"
     req2 = make_mocked_request("GET", "/metrics", app=app)
     resp2 = await metrics_handler(req2)
     assert resp2.status == 200
