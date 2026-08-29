@@ -87,7 +87,7 @@ def _find(router: Any, name: str) -> Callable[..., Awaitable[Any]]:
 # config
 # --------------------------------------------------------------------------- #
 def test_config_from_env_plain(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("BOT_TOKEN", "tok")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "tok")
     monkeypatch.setenv("ADMIN_PASSWORD", "pw")
     monkeypatch.setenv("ADMIN_IDS", "1,2,3")
     monkeypatch.setenv("REDIS_URL", "redis://h/1")
@@ -99,7 +99,7 @@ def test_config_from_env_plain(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_config_validate_missing(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("BOT_TOKEN", raising=False)
+    monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
     monkeypatch.delenv("ADMIN_PASSWORD", raising=False)
     monkeypatch.delenv("ADMIN_IDS", raising=False)
     cfg = Config(bot_token="", admin_password="", admin_ids=[])
@@ -130,7 +130,7 @@ def test_create_app_builds_bot_and_dispatcher(monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_create_app_default_config_none(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("BOT_TOKEN", "123456789:AAfake")
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "123456789:AAfake")
     monkeypatch.setenv("ADMIN_IDS", "1")
     monkeypatch.setattr(
         "src.core.bot_factory.RedisStorage.from_url",
