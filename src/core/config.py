@@ -16,6 +16,8 @@ class Config:
     sla_reply_minutes: int = 30
     sla_close_hours: int = 24
     sentry_dsn: str = ""
+    webhook_url: str = ""
+    webhook_cert_path: str = ""
     metrics_port: int = 8084
 
     @classmethod
@@ -40,6 +42,8 @@ class Config:
             sla_reply_minutes=int(os.getenv("SLA_REPLY_MINUTES", "30")),
             sla_close_hours=int(os.getenv("SLA_CLOSE_HOURS", "24")),
             sentry_dsn=os.getenv("SENTRY_DSN", ""),
+            webhook_url=os.getenv("WEBHOOK_URL", ""),
+            webhook_cert_path=os.getenv("WEBHOOK_CERT_PATH", ""),
             metrics_port=int(os.getenv("METRICS_PORT", "8084")),
         )
 
