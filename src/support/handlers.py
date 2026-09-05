@@ -9,7 +9,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 
 from src.core.bot_factory import AppState
 from src.core.fsm import TicketCreate, TicketReply
-from src.core.nav import client_menu
+from src.core.navigation import client_menu
 from src.core.ui import escape, ticket_card
 from src.support import service
 

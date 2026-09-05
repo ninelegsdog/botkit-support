@@ -26,7 +26,7 @@ from src.core.metrics import (
     Metrics,
     UpdatesMiddleware,
 )
-from src.core.nav import admin_menu, client_menu, manager_menu
+from src.core.navigation import admin_menu, client_menu, manager_menu
 from src.core.sentry import init_sentry
 from src.core.storage import Storage
 from src.core.throttling import ThrottlingMiddleware
@@ -423,7 +423,7 @@ async def test_payments_mock_provider() -> None:
     pid = await prov.create_payment(
         title="t", description="d", payload="p", amount=100
     )
-    assert pid == "mock_payment_123"
+    assert pid.startswith("https://t.me/mock-bot/invoice/")
     assert await prov.check_payment(pid) is True
 
 
