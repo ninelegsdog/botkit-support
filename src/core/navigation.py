@@ -32,7 +32,7 @@ class NavRegistry:
 def client_menu() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="🎫 Обращения"), KeyboardButton(text="📋 Статус")],
+            [KeyboardButton(text="➕ Новый тикет"), KeyboardButton(text="📋 Мои тикеты")],
             [KeyboardButton(text="❓ Помощь")],
         ],
         resize_keyboard=True,

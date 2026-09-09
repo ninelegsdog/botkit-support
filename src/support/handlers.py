@@ -25,6 +25,15 @@ def create_support_router(app_state: AppState) -> Router:
             reply_markup=client_menu(),
         )
 
+    @router.message(F.text == "❓ Помощь")
+    async def help_menu(message: Message) -> None:
+        await message.answer(
+            "❓ Чтобы мы помогли, опишите проблему:\n\n"
+            "➕ Новый тикет — создать обращение\n"
+            "📋 Мои тикеты — список ваших обращений",
+            reply_markup=client_menu(),
+        )
+
     @router.message(F.text == "➕ Новый тикет")
     async def start_ticket(message: Message, state: FSMContext) -> None:
         kb = InlineKeyboardMarkup(
