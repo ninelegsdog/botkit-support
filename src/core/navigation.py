@@ -42,8 +42,8 @@ def client_menu() -> ReplyKeyboardMarkup:
 def admin_menu() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="📋 Обращения"), KeyboardButton(text="👥 Операторы")],
-            [KeyboardButton(text="📊 Статистика")],
+            [KeyboardButton(text="👥 Менеджеры"), KeyboardButton(text="📊 Статистика")],
+            [KeyboardButton(text="⚙️ SLA"), KeyboardButton(text="⚡ Шаблоны")],
         ],
         resize_keyboard=True,
     )
@@ -52,8 +52,7 @@ def admin_menu() -> ReplyKeyboardMarkup:
 def manager_menu() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="🎫 Мои обращения"), KeyboardButton(text="📋 Все обращения")],
-            [KeyboardButton(text="📊 Статистика")],
+            [KeyboardButton(text="📋 Очередь тикетов"), KeyboardButton(text="📊 Моя статистика")],
         ],
         resize_keyboard=True,
     )
