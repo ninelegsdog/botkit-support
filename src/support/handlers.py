@@ -19,7 +19,8 @@ def create_support_router(app_state: AppState) -> Router:
     db = app_state.db
 
     @router.message(Command("start"))
-    async def cmd_start(message: Message) -> None:
+    async def cmd_start(message: Message, state: FSMContext) -> None:
+        await state.clear()
         await message.answer(
             "👋 Здравствуйте! Чем можем помочь?",
             reply_markup=client_menu(),

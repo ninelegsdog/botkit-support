@@ -335,7 +335,7 @@ async def test_support_cmd_start(monkeypatch: pytest.MonkeyPatch) -> None:
     router = create_support_router(state)
     cb = _find(router, "cmd_start")
     msg = _real_message("x")
-    await cb(msg)
+    await cb(msg, _fsm())
     answer.assert_awaited_once()
 
 
