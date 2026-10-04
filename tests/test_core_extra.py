@@ -339,6 +339,20 @@ async def test_support_cmd_start(monkeypatch: pytest.MonkeyPatch) -> None:
     answer.assert_awaited_once()
 
 
+async def test_support_cmd_start_clears_state(monkeypatch: pytest.MonkeyPatch) -> None:
+    from src.core.fsm import TicketCreate
+
+    answer = AsyncMock()
+    monkeypatch.setattr(Message, "answer", answer)
+    router = create_support_router(_app_state([1]))
+    cb = _find(router, "cmd_start")
+    fsm_ctx = _fsm()
+    await fsm_ctx.set_state(TicketCreate.choosing_category)
+    assert await fsm_ctx.get_state() is not None
+    await cb(_real_message("x"), fsm_ctx)
+    assert await fsm_ctx.get_state() is None
+
+
 async def test_support_my_tickets_empty(db, monkeypatch: pytest.MonkeyPatch) -> None:
     answer = AsyncMock()
     monkeypatch.setattr(Message, "answer", answer)
