@@ -45,7 +45,8 @@ ADMIN_IDS, ADMIN_PASSWORD, BOT_TOKEN, DB_PATH, LOG_LEVEL, METRICS_PORT, REDIS_UR
 pytest
 ```
 
-118 тестов в 24 файлах.
+[![CI](https://github.com/ninelegsdog/botkit-support/actions/workflows/ci.yml/badge.svg)](https://github.com/ninelegsdog/botkit-support/actions/workflows/ci.yml)
+Число тестов не дублируется в README вручную — актуальный прогон смотрите в CI (бейдж выше).
 
 ## Бэкапы
 
