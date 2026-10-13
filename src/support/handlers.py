@@ -8,6 +8,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from src.core.bot_factory import AppState
+from src.core.callbacks import parse_callback_int
 from src.core.fsm import TicketCreate, TicketReply
 from src.core.navigation import client_menu
 from src.core.ui import escape, ticket_card
@@ -143,7 +144,10 @@ def create_support_router(app_state: AppState) -> Router:
     async def start_reply(callback: CallbackQuery, state: FSMContext) -> None:
         if not callback.data:
             return
-        ticket_id = int(callback.data.split(":")[1])
+        ticket_id = parse_callback_int(callback.data, "ticket_reply:")
+        if ticket_id is None:
+            await callback.answer("Некорректный запрос.", show_alert=True)
+            return
         await state.update_data(ticket_id=ticket_id)
         await state.set_state(TicketReply.entering_reply)
         canned = await service.get_canned_responses(db)
@@ -159,7 +163,10 @@ def create_support_router(app_state: AppState) -> Router:
     async def use_canned(callback: CallbackQuery, state: FSMContext) -> None:
         if not callback.data:
             return
-        cid = int(callback.data.split(":")[1])
+        cid = parse_callback_int(callback.data, "canned:")
+        if cid is None:
+            await callback.answer("Некорректный запрос.", show_alert=True)
+            return
         body = await service.get_canned_body(db, cid)
         if not body:
             await callback.answer("Шаблон не найден.")
@@ -210,7 +217,10 @@ def create_support_router(app_state: AppState) -> Router:
     async def close_ticket_handler(callback: CallbackQuery) -> None:
         if not callback.data:
             return
-        ticket_id = int(callback.data.split(":")[1])
+        ticket_id = parse_callback_int(callback.data, "ticket_close:")
+        if ticket_id is None:
+            await callback.answer("Некорректный запрос.", show_alert=True)
+            return
         kb = InlineKeyboardMarkup(
             inline_keyboard=[
                 [
@@ -226,7 +236,10 @@ def create_support_router(app_state: AppState) -> Router:
     async def confirm_close(callback: CallbackQuery) -> None:
         if not callback.data:
             return
-        ticket_id = int(callback.data.split(":")[1])
+        ticket_id = parse_callback_int(callback.data, "ticket_close_yes:")
+        if ticket_id is None:
+            await callback.answer("Некорректный запрос.", show_alert=True)
+            return
         await service.close_ticket(db, ticket_id)
         await callback.message.edit_text("✅ Тикет закрыт.")  # type: ignore
         await callback.answer()
@@ -267,7 +280,10 @@ def create_support_router(app_state: AppState) -> Router:
     async def take_ticket_handler(callback: CallbackQuery) -> None:
         if not callback.data:
             return
-        ticket_id = int(callback.data.split(":")[1])
+        ticket_id = parse_callback_int(callback.data, "ticket_take:")
+        if ticket_id is None:
+            await callback.answer("Некорректный запрос.", show_alert=True)
+            return
         success = await service.take_ticket(db, ticket_id, callback.from_user.id)
         if not success:
             await callback.answer("Тикет уже взят.", show_alert=True)
