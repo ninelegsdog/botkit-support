@@ -13,14 +13,20 @@ async def create_ticket(
     user_id: int,
     category: str,
     subject: str = "",
+    sla_minutes: int = 30,
 ) -> int:
     async with db.transaction() as session:
         result = await session.execute(
             text(
-                "INSERT INTO tickets (user_id, category, subject, status) "
-                "VALUES (:uid, :cat, :subj, 'new')"
+                "INSERT INTO tickets (user_id, category, subject, status, sla_due) "
+                "VALUES (:uid, :cat, :subj, 'new', datetime('now', :sla_offset))"
             ),
-            {"uid": user_id, "cat": category, "subj": subject},
+            {
+                "uid": user_id,
+                "cat": category,
+                "subj": subject,
+                "sla_offset": f"+{int(sla_minutes)} minutes",
+            },
         )
         ticket_id = result.lastrowid  # type: ignore[attr-defined]
         assert ticket_id is not None
@@ -90,6 +96,7 @@ async def add_message(
     sender_id: int,
     sender_role: str,
     text_content: str,
+    sla_close_hours: int = 24,
 ) -> None:
     async with db.transaction() as session:
         await session.execute(
@@ -99,6 +106,15 @@ async def add_message(
             ),
             {"tid": ticket_id, "sid": sender_id, "role": sender_role, "txt": text_content},
         )
+        if sender_role == "manager":
+            # Ответ менеджера закрывает срок ответа — sla_due становится сроком закрытия.
+            await session.execute(
+                text(
+                    "UPDATE tickets SET sla_due = datetime('now', :close_offset) "
+                    "WHERE id = :tid"
+                ),
+                {"tid": ticket_id, "close_offset": f"+{int(sla_close_hours)} hours"},
+            )
 
 
 async def get_ticket_messages(db: Database, ticket_id: int) -> list[dict[str, Any]]:

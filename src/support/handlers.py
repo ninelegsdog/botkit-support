@@ -85,11 +85,13 @@ def create_support_router(app_state: AppState) -> Router:
             user_id=callback.from_user.id,
             category=str(data.get("category", "other")),
             subject=str(data.get("subject", "")),
+            sla_minutes=app_state.config.sla_reply_minutes,
         )
         app_state.metrics.inc_tickets()
         await state.clear()
         await callback.message.edit_text(  # type: ignore
-            f"✅ Тикет #{ticket_id} создан. Менеджер ответит в течение 30 минут."
+            f"✅ Тикет #{ticket_id} создан. Менеджер ответит в течение "
+            f"{app_state.config.sla_reply_minutes} минут."
         )
         await callback.answer()
         await callback.message.answer("Выберите действие:", reply_markup=client_menu())  # type: ignore
@@ -186,6 +188,7 @@ def create_support_router(app_state: AppState) -> Router:
             sender_id=message.from_user.id,  # type: ignore[union-attr]
             sender_role="manager",
             text_content=body,
+            sla_close_hours=app_state.config.sla_close_hours,
         )
         await state.clear()
         await message.answer(f"✅ Ответ отправлен по тикету #{ticket_id}.")
@@ -200,6 +203,7 @@ def create_support_router(app_state: AppState) -> Router:
             sender_id=message.from_user.id,  # type: ignore[union-attr]
             sender_role="manager",
             text_content=message.text or "",
+            sla_close_hours=app_state.config.sla_close_hours,
         )
         await state.clear()
         await message.answer(f"✅ Ответ отправлен по тикету #{ticket_id}.")
