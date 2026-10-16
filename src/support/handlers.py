@@ -60,7 +60,11 @@ def create_support_router(app_state: AppState) -> Router:
 
     @router.message(TicketCreate.entering_text)
     async def enter_text(message: Message, state: FSMContext) -> None:
-        await state.update_data(subject=message.text or "")
+        text = (message.text or "").strip()
+        if not text:
+            await message.answer("⚠️ Описание не может быть пустым. Напишите текст:")
+            return
+        await state.update_data(subject=text)
         data = await state.get_data()
         kb = InlineKeyboardMarkup(
             inline_keyboard=[
