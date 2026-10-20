@@ -9,7 +9,7 @@ from src.core.auth import AdminGate
 from src.core.bot_factory import AppState
 from src.core.fsm import AdminAuth
 from src.core.navigation import admin_menu, client_menu
-from src.support import service
+from src.support import service, texts
 
 
 def create_admin_router(app_state: AppState) -> Router:
@@ -29,7 +29,7 @@ def create_admin_router(app_state: AppState) -> Router:
     @router.message(Command("admin"))
     async def cmd_admin(message: Message, state: FSMContext) -> None:
         await state.set_state(AdminAuth.waiting_password)
-        await message.answer("🔑 Введите пароль:")
+        await message.answer(texts.ASK_PASSWORD)
 
     @router.message(AdminAuth.waiting_password)
     async def check_password(message: Message, state: FSMContext) -> None:
@@ -37,16 +37,16 @@ def create_admin_router(app_state: AppState) -> Router:
         if gate.is_throttled(user_id):
             await state.clear()
             await message.answer(
-                "⏳ Слишком много попыток. Попробуйте через 5 минут.",
+                texts.TOO_MANY_ATTEMPTS,
                 reply_markup=client_menu(),
             )
             return
         if gate.authorize(user_id, message.text or ""):
             await state.clear()
-            await message.answer("✅ Добро пожаловать!", reply_markup=admin_menu())
+            await message.answer(texts.ADMIN_WELCOME, reply_markup=admin_menu())
         else:
             await state.clear()
-            await message.answer("❌ Неверный пароль.", reply_markup=client_menu())
+            await message.answer(texts.BAD_PASSWORD, reply_markup=client_menu())
 
     @router.message(F.text == "👥 Менеджеры")
     async def list_managers(message: Message) -> None:
@@ -54,7 +54,7 @@ def create_admin_router(app_state: AppState) -> Router:
             return
         managers = await service.get_active_managers(db)
         if not managers:
-            await message.answer("Менеджеров нет.")
+            await message.answer(texts.NO_MANAGERS)
             return
         text = "👥 Менеджеры:\n" + "\n".join(
             f"• {m['name']} (ID: {m['user_id']})" for m in managers
@@ -90,6 +90,6 @@ def create_admin_router(app_state: AppState) -> Router:
     async def admin_canned(message: Message) -> None:
         if not is_admin(message.from_user.id):  # type: ignore[union-attr]
             return
-        await message.answer("⚡ Управление шаблонами ответов (v1.1)")
+        await message.answer(texts.CANNED_STUB)
 
     return router
