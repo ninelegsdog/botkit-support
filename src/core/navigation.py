@@ -4,6 +4,8 @@ from dataclasses import dataclass
 
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 
+from src.support import texts
+
 
 @dataclass(frozen=True)
 class NavSection:
@@ -32,8 +34,8 @@ class NavRegistry:
 def client_menu() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="➕ Новый тикет"), KeyboardButton(text="📋 Мои тикеты")],
-            [KeyboardButton(text="❓ Помощь")],
+            [KeyboardButton(text=texts.BTN_NEW_TICKET), KeyboardButton(text=texts.BTN_MY_TICKETS)],
+            [KeyboardButton(text=texts.BTN_HELP)],
         ],
         resize_keyboard=True,
     )
@@ -42,8 +44,8 @@ def client_menu() -> ReplyKeyboardMarkup:
 def admin_menu() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="👥 Менеджеры"), KeyboardButton(text="📊 Статистика")],
-            [KeyboardButton(text="⚙️ SLA"), KeyboardButton(text="⚡ Шаблоны")],
+            [KeyboardButton(text=texts.BTN_MANAGERS), KeyboardButton(text=texts.BTN_STATS)],
+            [KeyboardButton(text=texts.BTN_SLA), KeyboardButton(text=texts.BTN_CANNED)],
         ],
         resize_keyboard=True,
     )
@@ -52,7 +54,7 @@ def admin_menu() -> ReplyKeyboardMarkup:
 def manager_menu() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="📋 Очередь тикетов"), KeyboardButton(text="📊 Моя статистика")],
+            [KeyboardButton(text=texts.BTN_QUEUE), KeyboardButton(text=texts.BTN_MY_STATS)],
         ],
         resize_keyboard=True,
     )

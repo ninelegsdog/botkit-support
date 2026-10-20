@@ -12,7 +12,7 @@ from src.core.callbacks import parse_callback_int
 from src.core.fsm import TicketCreate, TicketReply
 from src.core.navigation import client_menu
 from src.core.ui import escape, ticket_card
-from src.support import service
+from src.support import service, texts
 
 
 def create_support_router(app_state: AppState) -> Router:
@@ -23,16 +23,14 @@ def create_support_router(app_state: AppState) -> Router:
     async def cmd_start(message: Message, state: FSMContext) -> None:
         await state.clear()
         await message.answer(
-            "👋 Здравствуйте! Чем можем помочь?",
+            texts.WELCOME,
             reply_markup=client_menu(),
         )
 
     @router.message(F.text == "❓ Помощь")
     async def help_menu(message: Message) -> None:
         await message.answer(
-            "❓ Чтобы мы помогли, опишите проблему:\n\n"
-            "➕ Новый тикет — создать обращение\n"
-            "📋 Мои тикеты — список ваших обращений",
+            texts.HELP,
             reply_markup=client_menu(),
         )
 
@@ -40,13 +38,13 @@ def create_support_router(app_state: AppState) -> Router:
     async def start_ticket(message: Message, state: FSMContext) -> None:
         kb = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text="💳 Оплата", callback_data="ticket_cat:payment")],
-                [InlineKeyboardButton(text="🚚 Доставка", callback_data="ticket_cat:delivery")],
-                [InlineKeyboardButton(text="🔧 Техника", callback_data="ticket_cat:technical")],
-                [InlineKeyboardButton(text="💬 Другое", callback_data="ticket_cat:other")],
+                [InlineKeyboardButton(text=texts.BTN_CAT_PAYMENT, callback_data="ticket_cat:payment")],
+                [InlineKeyboardButton(text=texts.BTN_CAT_DELIVERY, callback_data="ticket_cat:delivery")],
+                [InlineKeyboardButton(text=texts.BTN_CAT_TECHNICAL, callback_data="ticket_cat:technical")],
+                [InlineKeyboardButton(text=texts.BTN_CAT_OTHER, callback_data="ticket_cat:other")],
             ]
         )
-        await message.answer("Выберите категорию:", reply_markup=kb)
+        await message.answer(texts.CHOOSE_CATEGORY, reply_markup=kb)
 
     @router.callback_query(F.data.startswith("ticket_cat:"))
     async def choose_category(callback: CallbackQuery, state: FSMContext) -> None:
@@ -55,14 +53,14 @@ def create_support_router(app_state: AppState) -> Router:
         category = callback.data.split(":", 1)[1]
         await state.update_data(category=category)
         await state.set_state(TicketCreate.entering_text)
-        await callback.message.edit_text("Опишите проблему:")  # type: ignore
+        await callback.message.edit_text(texts.DESCRIBE_PROBLEM)  # type: ignore
         await callback.answer()
 
     @router.message(TicketCreate.entering_text)
     async def enter_text(message: Message, state: FSMContext) -> None:
         text = (message.text or "").strip()
         if not text:
-            await message.answer("⚠️ Описание не может быть пустым. Напишите текст:")
+            await message.answer(texts.EMPTY_DESCRIPTION)
             return
         await state.update_data(subject=text)
         data = await state.get_data()
@@ -76,8 +74,10 @@ def create_support_router(app_state: AppState) -> Router:
         )
         await state.set_state(TicketCreate.confirming)
         await message.answer(
-            f"Создать тикет?\nКатегория: {escape(str(data.get('category', '')))}\n"
-            f"Описание: {escape(str(data.get('subject', '')))}",
+            texts.confirm_prompt(
+                escape(str(data.get("category", ""))),
+                escape(str(data.get("subject", ""))),
+            ),
             reply_markup=kb,
         )
 
@@ -94,11 +94,10 @@ def create_support_router(app_state: AppState) -> Router:
         app_state.metrics.inc_tickets()
         await state.clear()
         await callback.message.edit_text(  # type: ignore
-            f"✅ Тикет #{ticket_id} создан. Менеджер ответит в течение "
-            f"{app_state.config.sla_reply_minutes} минут."
+            texts.ticket_created(ticket_id, app_state.config.sla_reply_minutes)
         )
         await callback.answer()
-        await callback.message.answer("Выберите действие:", reply_markup=client_menu())  # type: ignore
+        await callback.message.answer(texts.CHOOSE_ACTION, reply_markup=client_menu())  # type: ignore
 
         managers = await service.get_active_managers(db)
         card = ticket_card({
@@ -124,15 +123,15 @@ def create_support_router(app_state: AppState) -> Router:
     @router.callback_query(F.data == "ticket_cancel")
     async def cancel_ticket(callback: CallbackQuery, state: FSMContext) -> None:
         await state.clear()
-        await callback.message.edit_text("Тикет отменён.")  # type: ignore
+        await callback.message.edit_text(texts.TICKET_CANCELLED)  # type: ignore
         await callback.answer()
-        await callback.message.answer("Выберите действие:", reply_markup=client_menu())  # type: ignore
+        await callback.message.answer(texts.CHOOSE_ACTION, reply_markup=client_menu())  # type: ignore
 
     @router.message(F.text == "📋 Мои тикеты")
     async def my_tickets(message: Message) -> None:
         tickets = await service.get_user_tickets(db, message.from_user.id)  # type: ignore[union-attr]
         if not tickets:
-            await message.answer("У вас нет тикетов.")
+            await message.answer(texts.NO_TICKETS)
             return
         for t in tickets[:10]:
             card = ticket_card(t)
@@ -152,7 +151,7 @@ def create_support_router(app_state: AppState) -> Router:
             return
         ticket_id = parse_callback_int(callback.data, "ticket_reply:")
         if ticket_id is None:
-            await callback.answer("Некорректный запрос.", show_alert=True)
+            await callback.answer(texts.BAD_REQUEST, show_alert=True)
             return
         await state.update_data(ticket_id=ticket_id)
         await state.set_state(TicketReply.entering_reply)
@@ -162,7 +161,7 @@ def create_support_router(app_state: AppState) -> Router:
             for c in canned[:6]
         ]
         kb = InlineKeyboardMarkup(inline_keyboard=rows) if rows else None
-        await callback.message.edit_text("Напишите ответ (или выберите шаблон):", reply_markup=kb)  # type: ignore
+        await callback.message.edit_text(texts.WRITE_REPLY, reply_markup=kb)  # type: ignore
         await callback.answer()
 
     @router.callback_query(F.data.startswith("canned:"))
@@ -171,15 +170,15 @@ def create_support_router(app_state: AppState) -> Router:
             return
         cid = parse_callback_int(callback.data, "canned:")
         if cid is None:
-            await callback.answer("Некорректный запрос.", show_alert=True)
+            await callback.answer(texts.BAD_REQUEST, show_alert=True)
             return
         body = await service.get_canned_body(db, cid)
         if not body:
-            await callback.answer("Шаблон не найден.")
+            await callback.answer(texts.CANNED_NOT_FOUND)
             return
         await state.update_data(canned_body=body)
-        await callback.message.edit_text(f"Ответ (шаблон):\n{body}\n\nОтправить? ✅ / ✏️ напишите свой.")  # type: ignore
-        await callback.answer("Теперь отправьте /send или свой текст.")
+        await callback.message.edit_text(texts.canned_preview(body))  # type: ignore
+        await callback.answer(texts.CANNED_HINT)
 
     @router.message(Command("send"), TicketReply.entering_reply)
     async def send_canned_reply(message: Message, state: FSMContext) -> None:
@@ -195,7 +194,7 @@ def create_support_router(app_state: AppState) -> Router:
             sla_close_hours=app_state.config.sla_close_hours,
         )
         await state.clear()
-        await message.answer(f"✅ Ответ отправлен по тикету #{ticket_id}.")
+        await message.answer(texts.reply_sent(ticket_id))
 
     @router.message(TicketReply.entering_reply)
     async def send_reply(message: Message, state: FSMContext) -> None:
@@ -210,13 +209,13 @@ def create_support_router(app_state: AppState) -> Router:
             sla_close_hours=app_state.config.sla_close_hours,
         )
         await state.clear()
-        await message.answer(f"✅ Ответ отправлен по тикету #{ticket_id}.")
+        await message.answer(texts.reply_sent(ticket_id))
         ticket = await service.get_ticket(db, ticket_id)
         if ticket and ticket.get("manager_id"):
             try:
                 await app_state.bot.send_message(
                     int(str(ticket["manager_id"])),
-                    f"💬 Клиент ответил по тикету #{ticket_id}: {message.text}",
+                    texts.client_replied(ticket_id, message.text or ""),
                 )
             except Exception as e:
                 logger.warning("notify failed: %s", e)
@@ -227,7 +226,7 @@ def create_support_router(app_state: AppState) -> Router:
             return
         ticket_id = parse_callback_int(callback.data, "ticket_close:")
         if ticket_id is None:
-            await callback.answer("Некорректный запрос.", show_alert=True)
+            await callback.answer(texts.BAD_REQUEST, show_alert=True)
             return
         kb = InlineKeyboardMarkup(
             inline_keyboard=[
@@ -237,7 +236,7 @@ def create_support_router(app_state: AppState) -> Router:
                 ]
             ]
         )
-        await callback.message.edit_text("❓ Закрыть тикет?", reply_markup=kb)  # type: ignore
+        await callback.message.edit_text(texts.CONFIRM_CLOSE, reply_markup=kb)  # type: ignore
         await callback.answer()
 
     @router.callback_query(F.data.startswith("ticket_close_yes:"))
@@ -246,10 +245,10 @@ def create_support_router(app_state: AppState) -> Router:
             return
         ticket_id = parse_callback_int(callback.data, "ticket_close_yes:")
         if ticket_id is None:
-            await callback.answer("Некорректный запрос.", show_alert=True)
+            await callback.answer(texts.BAD_REQUEST, show_alert=True)
             return
         await service.close_ticket(db, ticket_id)
-        await callback.message.edit_text("✅ Тикет закрыт.")  # type: ignore
+        await callback.message.edit_text(texts.TICKET_CLOSED)  # type: ignore
         await callback.answer()
 
         kb = InlineKeyboardMarkup(
@@ -264,13 +263,13 @@ def create_support_router(app_state: AppState) -> Router:
             ]
         )
         try:
-            await callback.message.answer("Оцените качество: ⭐1-5", reply_markup=kb)  # type: ignore
+            await callback.message.answer(texts.RATE_PROMPT, reply_markup=kb)  # type: ignore
         except Exception as e:
             logger.warning("rate request failed: %s", e)
 
     @router.callback_query(F.data.startswith("ticket_close_no:"))
     async def cancel_close(callback: CallbackQuery) -> None:
-        await callback.message.edit_text("Тикет остаётся открытым.")  # type: ignore
+        await callback.message.edit_text(texts.CLOSE_DECLINED)  # type: ignore
         await callback.answer()
 
     @router.callback_query(F.data.startswith("ticket_rate:"))
@@ -281,7 +280,7 @@ def create_support_router(app_state: AppState) -> Router:
         ticket_id = int(parts[1])
         rating = int(parts[2])
         await service.add_feedback(db, ticket_id, rating, "")
-        await callback.message.edit_text(f"Спасибо за оценку: {'⭐' * rating}")  # type: ignore
+        await callback.message.edit_text(texts.thanked(rating))  # type: ignore
         await callback.answer()
 
     @router.callback_query(F.data.startswith("ticket_take:"))
@@ -290,13 +289,13 @@ def create_support_router(app_state: AppState) -> Router:
             return
         ticket_id = parse_callback_int(callback.data, "ticket_take:")
         if ticket_id is None:
-            await callback.answer("Некорректный запрос.", show_alert=True)
+            await callback.answer(texts.BAD_REQUEST, show_alert=True)
             return
         success = await service.take_ticket(db, ticket_id, callback.from_user.id)
         if not success:
-            await callback.answer("Тикет уже взят.", show_alert=True)
+            await callback.answer(texts.TICKET_ALREADY_TAKEN, show_alert=True)
             return
-        await callback.answer("✅ Тикет взят!")
+        await callback.answer(texts.TICKET_TAKEN)
         ticket = await service.get_ticket(db, ticket_id)
         if ticket:
             try:
