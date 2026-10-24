@@ -155,7 +155,7 @@ async def test_service_close_ticket():
     await migrate(db)
     ticket_id = await create_ticket(db, user_id=1, category="payment", subject="Test")
     await take_ticket(db, ticket_id, 456)
-    await close_ticket(db, ticket_id)
+    await close_ticket(db, ticket_id, user_id=1)
     ticket = await get_ticket(db, ticket_id)
     assert ticket["status"] == "closed"
     await db.close()
@@ -203,5 +203,5 @@ async def test_service_add_feedback():
     from src.core.migrations import migrate
     await migrate(db)
     ticket_id = await create_ticket(db, user_id=1, category="payment", subject="Test")
-    await add_feedback(db, ticket_id, 5, "Great!")
+    await add_feedback(db, ticket_id, 5, "Great!", user_id=1)
     await db.close()
