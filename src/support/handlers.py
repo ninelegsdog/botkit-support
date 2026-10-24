@@ -153,6 +153,13 @@ def create_support_router(app_state: AppState) -> Router:
         if ticket_id is None:
             await callback.answer(texts.BAD_REQUEST, show_alert=True)
             return
+        ticket = await service.get_ticket(db, ticket_id)
+        if ticket is None or (
+            ticket.get("user_id") != callback.from_user.id
+            and callback.from_user.id not in (app_state.config.admin_ids or [])
+        ):
+            await callback.answer(texts.BAD_REQUEST, show_alert=True)
+            return
         await state.update_data(ticket_id=ticket_id)
         await state.set_state(TicketReply.entering_reply)
         canned = await service.get_canned_responses(db)
@@ -247,7 +254,10 @@ def create_support_router(app_state: AppState) -> Router:
         if ticket_id is None:
             await callback.answer(texts.BAD_REQUEST, show_alert=True)
             return
-        await service.close_ticket(db, ticket_id)
+        closed = await service.close_ticket(db, ticket_id, user_id=callback.from_user.id, admin_ids=app_state.config.admin_ids)
+        if not closed:
+            await callback.answer(texts.BAD_REQUEST, show_alert=True)
+            return
         await callback.message.edit_text(texts.TICKET_CLOSED)  # type: ignore
         await callback.answer()
 
@@ -279,7 +289,10 @@ def create_support_router(app_state: AppState) -> Router:
         parts = callback.data.split(":")
         ticket_id = int(parts[1])
         rating = int(parts[2])
-        await service.add_feedback(db, ticket_id, rating, "")
+        ok = await service.add_feedback(db, ticket_id, rating, "", user_id=callback.from_user.id)
+        if not ok:
+            await callback.answer(texts.BAD_REQUEST, show_alert=True)
+            return
         await callback.message.edit_text(texts.thanked(rating))  # type: ignore
         await callback.answer()
 

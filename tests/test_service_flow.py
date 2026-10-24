@@ -20,7 +20,7 @@ async def test_full_ticket_flow(db):
         db, ticket_id=ticket_id, sender_id=222, sender_role="manager", text_content="We'll help"
     )
 
-    await service.close_ticket(db, ticket_id)
+    await service.close_ticket(db, ticket_id, user_id=111)
     ticket = await service.get_ticket(db, ticket_id)
     assert ticket["status"] == "closed"
 

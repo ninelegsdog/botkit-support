@@ -53,7 +53,7 @@ async def test_add_message(db):
 async def test_close_ticket(db):
     ticket_id = await service.create_ticket(db, user_id=123, category="payment")
     await service.take_ticket(db, ticket_id, 456)
-    await service.close_ticket(db, ticket_id)
+    await service.close_ticket(db, ticket_id, user_id=123)
     ticket = await service.get_ticket(db, ticket_id)
     assert ticket["status"] == "closed"
 
@@ -77,4 +77,4 @@ async def test_get_new_tickets(db):
 @pytest.mark.asyncio
 async def test_add_feedback(db):
     ticket_id = await service.create_ticket(db, user_id=123, category="payment")
-    await service.add_feedback(db, ticket_id, 5, "Great!")
+    await service.add_feedback(db, ticket_id, 5, "Great!", user_id=123)
