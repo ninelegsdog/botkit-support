@@ -171,3 +171,11 @@ Do not open a public issue for a security problem. See [SECURITY.md](SECURITY.md
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+## Screenshots
+
+| Меню поддержки | Создание тикета | FAQ | Ответ оператора |
+|---|---|---|---|
+| ![Menu](assets/screenshots/menu.png) | ![Ticket](assets/screenshots/ticket.png) | ![FAQ](assets/screenshots/faq.png) | ![Reply](assets/screenshots/reply.png) |
+
+*Скриншоты будут добавлены по мере обновления.*
