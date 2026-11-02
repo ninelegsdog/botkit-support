@@ -449,9 +449,88 @@ async def test_register_routers_includes_both() -> None:
     assert len(state.dp.sub_routers) == 2
 
 
+# --------------------------------------------------------------------------- #
+# support handlers — IDOR-гарды
+# --------------------------------------------------------------------------- #
+def _callback(data: str, user_id: int = 1) -> Any:
+    cb = MagicMock()
+    cb.data = data
+    cb.from_user = User(id=user_id, is_bot=False, first_name="U")
+    cb.message = MagicMock()
+    cb.message.edit_text = AsyncMock()
+    cb.message.answer = AsyncMock()
+    cb.answer = AsyncMock()
+    return cb
+
+
+async def test_support_close_ticket_чужой_получает_отказ() -> None:
+    from src.support import service
+
+    state = await _app_state_db([1])
+    ticket_id = await service.create_ticket(state.db, user_id=123, category="payment")
+    router = create_support_router(state)
+    handler = _find(router, "confirm_close")
+    cb = _callback(f"ticket_close_yes:{ticket_id}", user_id=999)
+
+    await handler(cb)
+
+    cb.message.edit_text.assert_not_awaited()
+    cb.answer.assert_awaited_once()
+    ticket = await service.get_ticket(state.db, ticket_id)
+    assert ticket["status"] != "closed"
+
+
+async def test_support_close_ticket_автор_закрывает() -> None:
+    from src.support import service
+
+    state = await _app_state_db([1])
+    ticket_id = await service.create_ticket(state.db, user_id=123, category="payment")
+    router = create_support_router(state)
+    handler = _find(router, "confirm_close")
+    cb = _callback(f"ticket_close_yes:{ticket_id}", user_id=123)
+
+    await handler(cb)
+
+    cb.message.edit_text.assert_awaited_once()
+    ticket = await service.get_ticket(state.db, ticket_id)
+    assert ticket["status"] == "closed"
+
+
+async def test_support_rate_ticket_чужой_получает_отказ() -> None:
+    from src.support import service
+
+    state = await _app_state_db([1])
+    ticket_id = await service.create_ticket(state.db, user_id=123, category="payment")
+    router = create_support_router(state)
+    handler = _find(router, "rate_ticket")
+    cb = _callback(f"ticket_rate:{ticket_id}:5", user_id=999)
+
+    await handler(cb)
+
+    cb.message.edit_text.assert_not_awaited()
+    cb.answer.assert_awaited_once()
+
+
+async def test_support_start_reply_чужой_не_входит_в_fsm() -> None:
+    from src.support import service
+
+    state = await _app_state_db([1])
+    ticket_id = await service.create_ticket(state.db, user_id=123, category="payment")
+    router = create_support_router(state)
+    handler = _find(router, "start_reply")
+    cb = _callback(f"ticket_reply:{ticket_id}", user_id=999)
+    ctx = _fsm(user_id=999)
+
+    await handler(cb, ctx)
+
+    cb.message.edit_text.assert_not_awaited()
+    assert await ctx.get_state() is None
+
+
 async def test_sla_check_loop_iterates(monkeypatch: pytest.MonkeyPatch) -> None:
     from src.sla import scheduler
     from src.support import service
+
 
     overdue = [{"id": 5, "user_id": 1, "manager_id": None}]
     get = AsyncMock(return_value=overdue)
