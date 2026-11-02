@@ -59,6 +59,38 @@ async def test_close_ticket(db):
 
 
 @pytest.mark.asyncio
+async def test_close_ticket_чужой_не_закрывает(db):
+    ticket_id = await service.create_ticket(db, user_id=123, category="payment")
+    closed = await service.close_ticket(db, ticket_id, user_id=999)
+    assert closed is False
+    ticket = await service.get_ticket(db, ticket_id)
+    assert ticket["status"] != "closed"
+
+
+@pytest.mark.asyncio
+async def test_close_ticket_автор_закрывает(db):
+    ticket_id = await service.create_ticket(db, user_id=123, category="payment")
+    closed = await service.close_ticket(db, ticket_id, user_id=123)
+    assert closed is True
+
+
+@pytest.mark.asyncio
+async def test_close_ticket_админ_закрывает_чужой(db):
+    ticket_id = await service.create_ticket(db, user_id=123, category="payment")
+    closed = await service.close_ticket(db, ticket_id, user_id=999, admin_ids=[999])
+    assert closed is True
+
+
+@pytest.mark.asyncio
+async def test_add_feedback_чужой_не_пишет(db):
+    ticket_id = await service.create_ticket(db, user_id=123, category="payment")
+    ok = await service.add_feedback(db, ticket_id, 5, "Great!", user_id=999)
+    assert ok is False
+    ok = await service.add_feedback(db, ticket_id, 5, "Great!", user_id=123)
+    assert ok is True
+
+
+@pytest.mark.asyncio
 async def test_get_user_tickets(db):
     await service.create_ticket(db, user_id=123, category="payment")
     await service.create_ticket(db, user_id=123, category="delivery")

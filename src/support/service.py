@@ -128,8 +128,28 @@ async def get_ticket_messages(db: Database, ticket_id: int) -> list[dict[str, An
         return [dict(r) for r in result.mappings().all()]
 
 
-async def close_ticket(db: Database, ticket_id: int) -> None:
+async def close_ticket(
+    db: Database,
+    ticket_id: int,
+    user_id: int | None = None,
+    admin_ids: list[int] | None = None,
+) -> bool:
+    """Закрыть тикет. False — тикета нет или закрывает не автор и не админ.
+
+    Один и тот же ответ на «нет тикета» и «чужой тикет», чтобы callback не был
+    оракулом существующих id.
+    """
     async with db.transaction() as session:
+        row = await session.execute(
+            text("SELECT user_id FROM tickets WHERE id = :tid"), {"tid": ticket_id}
+        )
+        r = row.first()
+        if r is None:
+            return False
+        owner = int(r[0])
+        admins = admin_ids or []
+        if user_id is not None and user_id != owner and user_id not in admins:
+            return False
         await session.execute(
             text(
                 "UPDATE tickets SET status = 'closed', closed_at = datetime('now') WHERE id = :tid"
@@ -143,6 +163,7 @@ async def close_ticket(db: Database, ticket_id: int) -> None:
             ),
             {"tid": ticket_id},
         )
+        return True
 
 
 async def escalate_ticket(db: Database, ticket_id: int) -> None:
@@ -154,13 +175,27 @@ async def escalate_ticket(db: Database, ticket_id: int) -> None:
 
 
 async def add_feedback(
-    db: Database, ticket_id: int, rating: int, feedback_text: str
-) -> None:
+    db: Database,
+    ticket_id: int,
+    rating: int,
+    feedback_text: str,
+    user_id: int | None = None,
+) -> bool:
+    """Оценка только от автора тикета. False — тикета нет или он чужой."""
     async with db.transaction() as session:
+        row = await session.execute(
+            text("SELECT user_id FROM tickets WHERE id = :tid"), {"tid": ticket_id}
+        )
+        r = row.first()
+        if r is None:
+            return False
+        if user_id is not None and int(r[0]) != user_id:
+            return False
         await session.execute(
             text("INSERT INTO feedback (ticket_id, rating, text) VALUES (:tid, :r, :t)"),
             {"tid": ticket_id, "r": rating, "t": feedback_text},
         )
+        return True
 
 
 async def get_ticket_stats(db: Database, period: str = "day") -> dict[str, int]:
