@@ -128,7 +128,12 @@ async def get_ticket_messages(db: Database, ticket_id: int) -> list[dict[str, An
         return [dict(r) for r in result.mappings().all()]
 
 
-async def close_ticket(db: Database, ticket_id: int, user_id: int | None = None, admin_ids: list[int] | None = None) -> bool:
+async def close_ticket(
+    db: Database,
+    ticket_id: int,
+    user_id: int | None = None,
+    admin_ids: list[int] | None = None,
+) -> bool:
     async with db.transaction() as session:
         # Проверка владения/роли: закрывать может автор тикета или админ.
         row = await session.execute(

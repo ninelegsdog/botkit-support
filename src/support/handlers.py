@@ -254,7 +254,9 @@ def create_support_router(app_state: AppState) -> Router:
         if ticket_id is None:
             await callback.answer(texts.BAD_REQUEST, show_alert=True)
             return
-        closed = await service.close_ticket(db, ticket_id, user_id=callback.from_user.id, admin_ids=app_state.config.admin_ids)
+        closed = await service.close_ticket(
+            db, ticket_id, user_id=callback.from_user.id, admin_ids=app_state.config.admin_ids,
+        )
         if not closed:
             await callback.answer(texts.BAD_REQUEST, show_alert=True)
             return
