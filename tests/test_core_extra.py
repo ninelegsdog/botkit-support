@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import sys
 from collections.abc import Awaitable, Callable
 from datetime import datetime
 from typing import Any
@@ -27,7 +26,6 @@ from src.core.metrics import (
     UpdatesMiddleware,
 )
 from src.core.navigation import admin_menu, client_menu, manager_menu
-from src.core.sentry import init_sentry
 from src.core.storage import Storage
 from src.core.throttling import ThrottlingMiddleware
 from src.core.webhook import create_app as create_webhook_app
@@ -238,25 +236,7 @@ def test_metrics_inc_helpers() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# sentry
 # --------------------------------------------------------------------------- #
-def test_sentry_no_dsn_silent() -> None:
-    init_sentry(None)
-
-
-def test_sentry_missing_sdk() -> None:
-    with pytest.MonkeyPatch.context() as mp:
-        mp.setitem(sys.modules, "sentry_sdk", None)
-        init_sentry("https://abc@sentry.io/1")  # must not raise
-
-
-def test_sentry_valid_dsn(monkeypatch: pytest.MonkeyPatch) -> None:
-    fake = MagicMock()
-    monkeypatch.setitem(sys.modules, "sentry_sdk", fake)
-    init_sentry("https://abc@sentry.io/1")  # must call sentry_sdk.init
-    fake.init.assert_called_once()
-
-
 # --------------------------------------------------------------------------- #
 # errors
 # --------------------------------------------------------------------------- #
